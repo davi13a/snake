@@ -1,171 +1,260 @@
-"""貪吃蛇"""
-
+##貪吃蛇
+# -*- coding: utf-8 -*-
+import tkinter as tk 
+# 使用Tkinter前需要先匯入
+import tkinter.messagebox
+import pickle
 import random
-import sys
 import time
-import pygame
-from pygame.locals import *
-from collections import deque
 
-SCREEN_WIDTH = 600
-SCREEN_HEIGHT = 480
-SIZE = 20
+# 第1步，範例化object，建立視窗window
+window = tk.Tk() 
+# 第2步，給視窗的視覺化起名字
+window.title('Greedy snake')
+# 第3步，設定視窗的大小(長 * 寬)
+# window.geometry('1004x504')  # 這裡的乘是小x
 
-
-def print_text(screen, font, x, y, text, fcolor=(255, 255, 255)):
-    imgText = font.render(text, True, fcolor)
-    screen.blit(imgText, (x, y))
-
-
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("貪吃蛇")
-
-    light = (100, 100, 100)  # 蛇的顏色
-    dark = (200, 200, 200)   # 食物顏色
-
-    font1 = pygame.font.SysFont("SimHei", 24)  # 得分的字體
-    font2 = pygame.font.Font(None, 72)  # GAME OVER 的字體
-    red = (200, 30, 30)                 # GAME OVER 的字體顏色
-    fwidth, fheight = font2.size("GAME OVER")
-    line_width = 1                      # 網格線寬度
-    black = (0, 0, 0)                   # 網格線顏色
-    bgcolor = (40, 40, 60)              # 背景色
-
-    # 方向，起始向右
-    pos_x = 1
-    pos_y = 0
-    # 如果蛇正在向右移動，那麽快速點擊向下向左，由於程序刷新沒那麽快，向下事件會被向左覆蓋掉，導致蛇後退，直接GAME OVER
-    # b 變量就是用於防止這種情況的發生
-    b = True
-    # 範圍
-    scope_x = (0, SCREEN_WIDTH // SIZE - 1)
-    scope_y = (2, SCREEN_HEIGHT // SIZE - 1)
-    # 蛇
-    snake = deque()
-    # 食物
-    food_x = 0
-    food_y = 0
-
-    # 初始化蛇
-    def _init_snake():
-        nonlocal snake
-        snake.clear()
-        snake.append((2, scope_y[0]))
-        snake.append((1, scope_y[0]))
-        snake.append((0, scope_y[0]))
-
-    # 食物
-    def _create_food():
-        nonlocal food_x, food_y
-        food_x = random.randint(scope_x[0], scope_x[1])
-        food_y = random.randint(scope_y[0], scope_y[1])
-        while (food_x, food_y) in snake:
-            # 為了防止食物出到蛇身上
-            food_x = random.randint(scope_x[0], scope_x[1])
-            food_y = random.randint(scope_y[0], scope_y[1])
-
-    _init_snake()
-    _create_food()
-
-    game_over = True
-    start = False       # 是否開始，當start = True，game_over = True 時，才顯示 GAME OVER
-    score = 0           # 得分
-    orispeed = 0.5      # 原始速度
-    speed = orispeed
-    last_move_time = None
-    pause = False       # 暫停
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                sys.exit()
-            elif event.type == KEYDOWN:
-                if event.key == K_RETURN:
-                    if game_over:
-                        start = True
-                        game_over = False
-                        b = True
-                        _init_snake()
-                        _create_food()
-                        pos_x = 1
-                        pos_y = 0
-                        # 得分
-                        score = 0
-                        last_move_time = time.time()
-                elif event.key == K_SPACE:
-                    if not game_over:
-                        pause = not pause
-                elif event.key in (K_w, K_UP):
-                    # 這個判斷是為了防止蛇向上移時按了向下鍵，導致直接 GAME OVER
-                    if b and not pos_y:
-                        pos_x = 0
-                        pos_y = -1
-                        b = False
-                elif event.key in (K_s, K_DOWN):
-                    if b and not pos_y:
-                        pos_x = 0
-                        pos_y = 1
-                        b = False
-                elif event.key in (K_a, K_LEFT):
-                    if b and not pos_x:
-                        pos_x = -1
-                        pos_y = 0
-                        b = False
-                elif event.key in (K_d, K_RIGHT):
-                    if b and not pos_x:
-                        pos_x = 1
-                        pos_y = 0
-                        b = False
-
-        # 填充背景色
-        screen.fill(bgcolor)
-        # 畫網格線 豎線
-        for x in range(SIZE, SCREEN_WIDTH, SIZE):
-            pygame.draw.line(screen, black, (x, scope_y[0] * SIZE), (x, SCREEN_HEIGHT), line_width)
-        # 畫網格線 橫線
-        for y in range(scope_y[0] * SIZE, SCREEN_HEIGHT, SIZE):
-            pygame.draw.line(screen, black, (0, y), (SCREEN_WIDTH, y), line_width)
-
-        if game_over:
-            if start:
-                print_text(screen, font2, (SCREEN_WIDTH - fwidth)//2, (SCREEN_HEIGHT - fheight)//2, "GAME OVER", red)
-        else:
-            curTime = time.time()
-            if curTime - last_move_time > speed:
-                if not pause:
-                    b = True
-                    last_move_time = curTime
-                    next_s = (snake[0][0] + pos_x, snake[0][1] + pos_y)
-                    if next_s[0] == food_x and next_s[1] == food_y:
-                        # 吃到了食物
-                        _create_food()
-                        snake.appendleft(next_s)
-                        score += 10
-                        speed = orispeed - 0.03 * (score // 100)
-                    else:
-                        if scope_x[0] <= next_s[0] <= scope_x[1] and scope_y[0] <= next_s[1] <= scope_y[1]                                 and next_s not in snake:
-                            snake.appendleft(next_s)
-                            snake.pop()
-                        else:
-                            game_over = True
-
-        # 畫食物
-        if not game_over:
-            # 避免 GAME OVER 的時候把 GAME OVER 的字給遮住了
-            pygame.draw.rect(screen, light, (food_x * SIZE, food_y * SIZE, SIZE, SIZE), 0)
-
-        # 畫蛇
-        for s in snake:
-            pygame.draw.rect(screen, dark, (s[0] * SIZE + line_width, s[1] * SIZE + line_width,
-                                            SIZE - line_width * 2, SIZE - line_width * 2), 0)
-
-        print_text(screen, font1, 30, 7, f"速度: {score//100}")
-        print_text(screen, font1, 450, 7, f"得分: {score}")
-
-        pygame.display.update()
+# 第5步，建立一個主frame，長在主window視窗上
+frame = tk.Frame(window, bg = 'blue', bd = 2, relief = tk.FLAT)
+frame.pack(side = 'left')
+#當前框架被選中，意思是鍵盤觸發，只對這個框架有效
+frame.focus_set()
+Labellist = [] #存放所有方塊的label
+Blocklist = [] #存放背景方塊的值 1：被佔用 0：空閒
+Snakelist = [] #存放snake的座標
+height = 15
+width = 20
+#snack前進方向
+left = 0
+right = 1
+up = 2
+down =3
+pause = 0
+start = 1
+class App(tk.Frame):  
+  def __init__(self,master):    
+    self.window = master    
+    tk.Frame.__init__(self)    
+    master.bind('<Up>',self.Up)    
+    master.bind('<Left>',self.Left)    
+    master.bind('<Right>',self.Right)    
+    master.bind('<Down>',self.Down)    
+    master.bind('<p>',self.Pause)    
+    master.bind('<s>',self.Start)    
+    master.bind('<r>',self.Restart)    
+    self.Init_snake() #初始化介面方法
+    self.time = 1000    
+    self.Onetime()          
+  def Up(self, event):    
+    if self.Istart:      
+      self.direction = up  
+  def Down(self, event):    
+    if self.Istart:      
+      self.direction = down  
+  def Left(self, event):    
+    if self.Istart:      
+      self.direction = left  
+  def Right(self, event):    
+    if self.Istart:      
+      self.direction = right
+  def Init_snake(self):    
+    del Labellist[:]    
+    del Blocklist[:]    
+    del Snakelist[:]        
+    #初始化背景方塊    
+    LabelRowList = []    
+    BlockRowlist = []    
+    c = r = 0    
+    for k in range(width*height):      
+      LN=tk.Label(frame,text = '  ', bg = 'black', fg = 'white', relief = tk.FLAT, bd = 4)      
+      LN.grid(row=r,column=c,sticky=tk.N+tk.E+tk.S+tk.W)      
+      LabelRowList.append(LN)      
+      BlockRowlist.append(0)      
+      c=c+1  
+      if c>=20:
+        r=r+1
+        c=0        
+        Labellist.append(LabelRowList)        
+        Blocklist.append(BlockRowlist)        
+        LabelRowList = []        
+        BlockRowlist = []    
+    #初始化snake    
+    self.Istart = 0    
+    self.direction = left
+    self.direction_last = left
+    self.overflag = 0  
+    #snake head的初始位置    
+    self.x = 7    
+    self.y = 8    
+    #snake tail的初始位置    
+    self.x_tail = 7    
+    self.y_tail = 10    
+    Snakelist.append((7,8))    
+    Snakelist.append((7,9))    
+    Snakelist.append((7,10))    
+    self.snakelen = len(Snakelist)
 
 
-if __name__ == "__main__":
-    main()
+    Blocklist[self.x][self.y] = 1    
+    Blocklist[self.x][self.y+1] = 1    
+    Blocklist[self.x][self.y+2] = 1    
+    Labellist[self.x][self.y].config(bg = 'green', relief = tk.RAISED)    
+    Labellist[self.x][self.y+1].config(bg = 'white', relief = tk.RAISED)    
+    Labellist[self.x][self.y+2].config(bg = 'white', relief = tk.RAISED)    
+    #初始化food    
+    self.food_x = random.randint(0,14)    
+    self.food_y = random.randint(0,19)    
+    while Blocklist[self.food_x][self.food_y] == 1:      
+      self.food_x = random.randint(0,14)      
+      self.food_y = random.randint(0,19)          
+    Blocklist[self.food_x][self.food_y] = 1    
+    Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE)
+  def Pause(self, event):    
+    self.Istart = pause  
+  def Start(self, event):    
+    self.Istart = start  
+  def Restart(self, event):    
+    self.Init_snake()
+  def Onetime(self): #每1000ms做一次介面重新整理    
+    if self.Istart and self.overflag == 0:  
+      if (self.direction_last == down and self.direction == up )or(self.direction_last == up and self.direction == down )or(self.direction_last ==left and self.direction == right )or(self.direction_last ==right and self.direction == left ):
+        self.direction = self.direction_last
+      self.direction_last = self.direction 
+      x0 = self.x      
+      y0 = self.y      
+      if self.direction == left:        
+        if x0 == self.food_x and y0-1 == self.food_y:                    
+          Labellist[x0][y0-1].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)
+          self.food_x = random.randint(0,14)          
+          self.food_y = random.randint(0,19)          
+          while Blocklist[self.food_x][self.food_y] == 1:            
+            self.food_x = random.randint(0,14)            
+            self.food_y = random.randint(0,19)          
+          Blocklist[self.food_x][self.food_y] = 1          
+          Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE)
+          self.snakelen += 1          
+          Snakelist.insert(0,(x0,y0-1))           
+          self.x = x0          
+          self.y = y0 - 1        
+        elif (x0>=0 and x0<height and y0-1>=0 and y0-1<width and Blocklist[x0][y0-1] == 0) or (self.x_tail == x0 and self.y_tail == y0 - 1):                              
+          Blocklist[self.x_tail][self.y_tail] = 0          
+          Labellist[self.x_tail][self.y_tail].config(bg = 'black', relief = tk.FLAT)          
+          Blocklist[x0][y0-1] = 1          
+          Labellist[x0][y0-1].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)                     
+          del Snakelist[self.snakelen - 1]          
+          Snakelist.insert(0,(x0,y0-1))           
+          self.x = x0          
+          self.y = y0 - 1          
+          self.x_tail = Snakelist[self.snakelen - 1][0]          
+          self.y_tail = Snakelist[self.snakelen - 1][1]        
+        else:          
+          tk.messagebox.showinfo(title = 'snake', message = 'game over!!!')          
+          self.overflag = 1          
+      elif self.direction == up:        
+        if x0-1 == self.food_x and y0 == self.food_y:                     
+          Labellist[x0-1][y0].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)
+          self.food_x = random.randint(0,14)          
+          self.food_y = random.randint(0,19)          
+          while Blocklist[self.food_x][self.food_y] == 1:            
+            self.food_x = random.randint(0,14)            
+            self.food_y = random.randint(0,19)          
+          Blocklist[self.food_x][self.food_y] = 1          
+          Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE) 
+          self.snakelen += 1          
+          Snakelist.insert(0,(x0-1,y0))           
+          self.x = x0 - 1          
+          self.y = y0 
+        elif (x0-1 >=0 and x0-1<height and y0>=0 and y0<width and Blocklist[x0-1][y0] == 0) or (self.x_tail == x0-1 and self.y_tail == y0):                    
+          Blocklist[self.x_tail][self.y_tail] = 0          
+          Labellist[self.x_tail][self.y_tail].config(bg = 'black', relief = tk.FLAT)          
+          Blocklist[x0-1][y0] = 1          
+          Labellist[x0-1][y0].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)
+          del Snakelist[self.snakelen - 1]          
+          Snakelist.insert(0,(x0 - 1,y0))           
+          self.x = x0 - 1          
+          self.y = y0          
+          self.x_tail = Snakelist[self.snakelen - 1][0]          
+          self.y_tail = Snakelist[self.snakelen - 1][1]        
+        else:          
+          tk.messagebox.showinfo(title = 'snake', message = 'game over!!!')          
+          self.overflag = 1      
+      elif self.direction == down:        
+        if x0+1 == self.food_x and y0 == self.food_y:                    
+          Labellist[x0+1][y0].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)
+          self.food_x = random.randint(0,14)          
+          self.food_y = random.randint(0,19)          
+          while Blocklist[self.food_x][self.food_y] == 1:            
+            self.food_x = random.randint(0,14)            
+            self.food_y = random.randint(0,19)          
+          Blocklist[self.food_x][self.food_y] = 1          
+          Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE) 
+          self.snakelen += 1          
+          Snakelist.insert(0,(x0+1,y0))           
+          self.x = x0 + 1          
+          self.y = y0 
+        elif (x0+1 >=0 and x0+1 <height and y0>=0 and y0<width and Blocklist[x0+1][y0] == 0) or (self.x_tail == x0+1 and self.y_tail == y0):                              
+          Blocklist[self.x_tail][self.y_tail] = 0          
+          Labellist[self.x_tail][self.y_tail].config(bg = 'black', relief = tk.FLAT)          
+          Blocklist[x0+1][y0] = 1          
+          Labellist[x0+1][y0].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED) 
+          del Snakelist[self.snakelen - 1]          
+          Snakelist.insert(0,(x0 + 1,y0))           
+          self.x = x0 + 1          
+          self.y = y0          
+          self.x_tail = Snakelist[self.snakelen - 1][0]          
+          self.y_tail = Snakelist[self.snakelen - 1][1]        
+        else:          
+          tk.messagebox.showinfo(title = 'snake', message = 'game over!!!')          
+          self.overflag = 1     
+      elif self.direction == right:        
+        if x0 == self.food_x and y0+1 == self.food_y:                    
+          Labellist[x0][y0+1].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)
+          self.food_x = random.randint(0,14)          
+          self.food_y = random.randint(0,19)          
+          while Blocklist[self.food_x][self.food_y] == 1:            
+            self.food_x = random.randint(0,14)            
+            self.food_y = random.randint(0,19)          
+          Blocklist[self.food_x][self.food_y] = 1          
+          Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE) 
+          self.snakelen += 1          
+          Snakelist.insert(0,(x0,y0 + 1))           
+          self.x = x0          
+          self.y = y0 + 1 
+        elif (x0>=0 and x0<height and y0+1>=0 and y0+1<width and Blocklist[x0][y0+1] == 0) or (self.x_tail == x0 and self.y_tail == y0+1):                            
+          Blocklist[self.x_tail][self.y_tail] = 0          
+          Labellist[self.x_tail][self.y_tail].config(bg = 'black', relief = tk.FLAT)          
+          Blocklist[x0][y0+1] = 1          
+          Labellist[x0][y0+1].config(bg = 'green', relief = tk.RAISED)          
+          Labellist[x0][y0].config(bg = 'white', relief = tk.RAISED)  
+          del Snakelist[self.snakelen - 1]          
+          Snakelist.insert(0,(x0,y0 + 1))           
+          self.x = x0          
+          self.y = y0 + 1          
+          self.x_tail = Snakelist[self.snakelen - 1][0]          
+          self.y_tail = Snakelist[self.snakelen - 1][1]        
+        else:          
+          tk.messagebox.showinfo(title = 'snake', message = 'game over!!!')          
+          self.overflag = 1    
+    self.after(self.time,self.Onetime)
+def Start_Stop():  
+  app.Istart = 1 - app.Istart 
+def Restart():  
+  app.Restart(0)  
+#主選單
+mainmenu = tk.Menu(window)
+window['menu'] = mainmenu
+#二級選單：game
+gamemenu=tk.Menu(mainmenu)
+mainmenu.add_cascade(label='遊戲',menu=gamemenu)
+gamemenu.add_command(label = '開始/暫停',command=Start_Stop)
+gamemenu.add_command(label = '重置',command=Restart)
+gamemenu.add_command(label = '退出',command=window.quit)
+app = App(window)    
+window.mainloop()
