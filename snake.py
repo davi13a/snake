@@ -108,7 +108,7 @@ class App(tk.Frame):
       self.food_x = random.randint(0,14)      
       self.food_y = random.randint(0,19)          
     Blocklist[self.food_x][self.food_y] = 1    
-    Labellist[self.food_x][self.food_y].config(bg = 'red', relief = tk.RIDGE)
+    Labellist[self.food_x][self.food_y].config(bg = 'yellow', relief = tk.RIDGE)
   def Pause(self, event):    
     self.Istart = pause  
   def Start(self, event):    
